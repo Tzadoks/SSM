@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd">
+
+    <!-- controller配置   -->
+    <bean id="userController" class="com.tzadok.spring.controller.UserController" autowire="byType">
+<!--        <property name="userService" ref="userService"></property>-->
+    </bean>
+
+    <!--  userService实现类  -->
+    <bean id="userService" class="com.tzadok.spring.service.impl.UserServiceImpl" autowire="byType">
+<!--        <property name="userDao" ref="userDao"></property>-->
+    </bean>
+
+    <!-- userDao实现类   -->
+    <bean id="userDao" class="com.tzadok.spring.dao.impl.UserDaoImpl"></bean>
+
+</beans>

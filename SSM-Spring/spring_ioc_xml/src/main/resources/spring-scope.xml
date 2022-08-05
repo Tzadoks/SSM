@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd">
+
+    <!-- bean的作用域   -->
+    <!-- scope属性(默认为singleton)：设置bean的作用域
+            prototype：多例模式（表示获取该bean的对象不是同一个）
+            singleton：单例模式（表示获取该bean的对象是同一个）
+    -->
+    <bean id="student" class="com.tzadok.spring.pojo.Student" scope="prototype">
+        <property name="sid" value="1001"></property>
+        <property name="name" value="tzadok"></property>
+    </bean>
+</beans>
