@@ -1042,3 +1042,677 @@ public class UserController {
      */
 ```
 
+### 3、AOP
+
+#### 3.1场景模拟
+
+##### 3.1.1、场景介绍
+
+做一个计算器，功能包含 加减乘除，但要在业务逻辑上面加上日志功能，譬如
+
+```java
+@Override 
+public int sub(int i, int j) { 
+    System.out.println("[日志] sub 方法开始了，参数是：" + i + "," + j); 
+    int result = i - j; 
+    System.out.println("方法内部 result = " + result); 
+    System.out.println("[日志] sub 方法结束了，结果是：" + result); return result; 
+}
+```
+
+##### 3.1.2、提出问题
+
+针对日志功能，发现如下缺陷：
+
+- 对核心业务功能有干扰，导致程序员在开发核心业务功能时分散了精力
+- 附加功能分散在各个业务功能方法中，不利于统一维护
+
+##### 3.1.3、解决问题--解耦
+
+将日志功能抽取出来，使得业务逻辑的代码清晰可见，便于管理
+
+#### 3.2、代理模式
+
+##### 3.2.1、概念
+
+**①介绍**
+
+二十三种设计模式中的一种，属于结构型模式。它的作用就是通过提供一个代理类，让我们在调用目标方法的时候，不再是直接对目标方法进行调用，而是通过代理类**间接**调用。让不属于目标方法核心逻辑的代码从目标方法中剥离出来——**解耦**。调用目标方法时先调用代理对象的方法，减少对目标方法的调用和打扰，同时让附加功能能够集中在一起也有利于统一维护。
+
+<img src="Spring.assets/003.png" alt="003" style="zoom:50%;" />
+
+使用代理后
+
+<img src="Spring.assets/004.png" alt="004" style="zoom:50%;" />
+
+**②生活中的代理**
+
+广告商找大明星拍广告需要经过经纪人
+
+合作伙伴找大老板谈合作要约见面时间需要经过秘书
+
+房产中介是买卖双方的代理
+
+**③相关术语**
+
+代理：将非核心逻辑剥离出来以后，封装这些非核心逻辑的类、对象、方法。
+
+目标：被代理“套用”了非核心逻辑代码的类、对象、方法。
+
+##### 3.2.2、静态代理
+
+```java
+public class CalculatorStaticProxy implements Calculator{
+
+    // 将被代理的目标对象声明为成员变量
+    private Calculator target;
+
+    public CalculatorStaticProxy(Calculator target) {
+        this.target = target;
+    }
+
+    @Override
+    public int add(int i, int j) {
+        int addResult = 0;
+        try {
+            // 附加功能由代理类中的代理方法来实现
+            System.out.println("[日志] add 方法开始了，参数是：" + i + "," + j);
+
+            addResult = target.add(i, j);
+
+            // 通过目标对象来实现核心业务逻辑
+            System.out.println("[日志] add 方法结束了，结果是：" + addResult);
+        } catch (Exception e) {
+            e.printStackTrace();
+        } finally {
+
+        }
+        return addResult;
+    }
+}
+```
+
+静态代理确实实现了解耦，但是由于代码都写死了，完全不具备任何的灵活性。就拿日志功能来说，将来其他地方也需要附加日志，那还得再声明更多个静态代理类，那就产生了大量重复的代码，日志功能还是分散的，没有统一管理。
+
+提出进一步的需求：将日志功能集中到一个代理类中，将来有任何日志需求，都通过这一个代理
+
+类来实现。这就需要使用动态代理技术了。
+
+##### 3.2.3、动态代理
+
+<img src="Spring.assets/005.png" alt="005"  />
+
+代理工厂类
+
+```java
+public class ProxyFactory {
+
+    private Object target;
+
+    public ProxyFactory(Object target) {
+        this.target = target;
+    }
+
+    public Object getProxy(){
+
+        /**
+         * ClassLoader loader：指定加载动态生成的代理类的类加载器
+         * Class[] interfaces：获取目标对象实现的所有接口的class对象的数组
+         * InvocationHandler h：设置代理类中的抽象方法如何重写
+         */
+        ClassLoader loader = ProxyFactory.class.getClassLoader();
+
+        Class<?>[] interfaces = target.getClass().getInterfaces();
+
+        InvocationHandler h = new InvocationHandler() {
+            @Override
+            public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
+                Object result = null;
+                try {
+                    System.out.println("日志，方法：" + method.getName() + ",参数：" + Arrays.toString(args));
+
+                    //proxy:表示代理对象，method表示要执行的方法，args表示要执行的方法的参数列表
+                    result = method.invoke(target, args);
+
+                    System.out.println("日志，方法：" + method.getName() + ",结果：" + result);
+                } catch (Exception e) {
+                    e.printStackTrace();
+                    System.out.println("日志，方法：" + method.getName() + ",异常：" + e);
+                } finally {
+                    System.out.println("日志，方法：" + method.getName() + ",方法执行完毕");
+                }
+                return result;
+            }
+        };
+
+        return Proxy.newProxyInstance(loader,interfaces,h);
+    }
+}
+```
+
+##### 3.2.4、测试
+
+```java
+public class ProxyTest {
+
+    /**
+     * 静态代理
+     */
+    @Test
+    public void testProxy(){
+        CalculatorStaticProxy proxy = new CalculatorStaticProxy(new CalculatorImpl());
+
+        proxy.add(1,2);
+    }
+    /**
+     * 动态代理有两种：
+     * 1、jdk动态代理，要求必须有接口，最终生成的代理类在和目标实现相同的接口
+     * 在com.sun.proxy包下，类型为$proxy2
+     * 2、cglib动态代理，最终生成的代理类会继承目标类，并且和目标类在相同的包下
+     *
+     */
+    @Test
+    public void testProxyFactory(){
+        ProxyFactory proxyFactory = new ProxyFactory(new CalculatorImpl());
+
+        Calculator proxy = (Calculator) proxyFactory.getProxy();
+
+        proxy.div(1,0);
+    }
+}
+```
+
+#### 3.3、AOP和相关术语
+
+##### 3.3.1、概述
+
+AOP（Aspect Oriented Programming）是一种设计思想，是软件设计领域中的面向切面编程，它是面向对象编程的一种补充和完善，它以通过预编译方式和运行期动态代理方式实现在不修改源代码的情况下给程序动态统一添加额外功能的一种技术。
+
+##### 3.3.2、相关术语
+
+**①横切关注点**
+
+从每个方法中抽取出来的同一类非核心业务。在同一个项目中，我们可以使用多个横切关注点对相关方法进行多个不同方面的增强。
+
+这个概念不是语法层面天然存在的，而是根据附加功能的逻辑上的需要：有十个附加功能，就有十个横切关注点。
+
+<img src="Spring.assets/006.png" alt="006" style="zoom:80%;" />
+
+**②通知**
+
+每一个横切关注点上要做的事情都需要写一个方法来实现，这样的方法就叫通知方法。
+
+- 前置通知：在被代理的目标方法**前**执行
+- 返回通知：在被代理的目标方法**成功结束**后执行（**寿终正寝**）
+- 异常通知：在被代理的目标方法**异常结束**后执行（**死于非命**）
+- 后置通知：在被代理的目标方法**最终结束**后执行（**盖棺定论**）
+- 环绕通知：使用try...catch...finally结构围绕**整个**被代理的目标方法，包括上面四种通知对应的所有位置
+
+<img src="Spring.assets/007.png" alt="007" style="zoom:80%;" />
+
+**③切面**
+
+封装通知方法的类。
+
+<img src="Spring.assets/008.png" alt="008" style="zoom:80%;" />
+
+**④目标**
+
+被代理的目标对象。
+
+**⑤代理**
+
+向目标对象应用通知之后创建的代理对象。
+
+**⑥连接点**
+
+这也是一个纯逻辑概念，不是语法定义的。
+
+把方法排成一排，每一个横切位置看成x轴方向，把方法从上到下执行的顺序看成y轴，x轴和y轴的交叉
+
+点就是连接点。
+
+![009](Spring.assets/009.png)
+
+**⑦切入点**
+
+定位连接点的方式。
+
+每个类的方法中都包含多个连接点，所以连接点是类中客观存在的事物（从逻辑上来说）。
+
+如果把连接点看作数据库中的记录，那么切入点就是查询记录的 SQL 语句。
+
+Spring 的 AOP 技术可以通过切入点定位到特定的连接点。
+
+切点通过 org.springframework.aop.Pointcut 接口进行描述，它使用类和方法作为连接点的查询条件。
+
+##### 3.3.3、作用
+
+简化代码：把方法中固定位置的重复的代码**抽取**出来，让被抽取的方法更专注于自己的核心功能，提高内聚性。
+
+代码增强：把特定的功能封装到切面类中，看哪里有需要，就往上套，被**套用**了切面逻辑的方法就被切面给增强了。
+
+#### 3.4、基于注解的AOP
+
+##### 3.4.1、技术说明
+
+<img src="Spring.assets/010.png" alt="010" style="zoom:50%;" />
+
+- 动态代理（InvocationHandler）：JDK原生的实现方式，需要被代理的目标类必须实现接口。因为这个技术要求**代理对象和目标对象实现同样的接口**（兄弟两个拜把子模式）。
+
+- cglib：通过**继承被代理的目标类**（认干爹模式）实现代理，所以不需要目标类实现接口。
+
+- AspectJ：本质上是静态代理，**将代理逻辑****“****织入****”****被代理的目标类编译得到的字节码文件**，所以最终效果是动态的。weaver就是织入器。Spring只是借用了AspectJ中的注解。
+
+##### 3.4.2、准备工作
+
+**①添加依赖**
+
+```xml
+<dependencies>
+        <!-- 基于Maven依赖传递性，导入spring-context依赖即可导入当前所需所有jar包 -->
+        <dependency>
+            <groupId>org.springframework</groupId>
+            <artifactId>spring-context</artifactId>
+            <version>5.3.1</version>
+        </dependency>
+
+        <!-- junit测试 -->
+        <dependency>
+            <groupId>junit</groupId>
+            <artifactId>junit</artifactId>
+            <version>4.12</version>
+            <scope>test</scope>
+        </dependency>
+
+        <!-- spring-aspects会帮我们传递过来aspectjweaver -->
+        <dependency>
+            <groupId>org.springframework</groupId>
+            <artifactId>spring-aspects</artifactId>
+            <version>5.3.1</version>
+        </dependency>
+    </dependencies>
+```
+
+**②准备被代理的目标资源**
+
+接口：
+
+```java
+public interface Calculator {
+
+    int add(int i, int j);
+
+    int sub(int i, int j);
+
+    int mul(int i, int j);
+
+    int div(int i, int j);
+}
+```
+
+接口实现类：
+
+```java
+@Component
+public class CalculatorImpl implements Calculator{
+    @Override
+    public int add(int i, int j) {
+
+        int result = i + j;
+
+        System.out.println("方法内部 result = " + result);
+
+        return result;
+    }
+
+    @Override
+    public int sub(int i, int j) {
+
+        int result = i - j;
+
+        System.out.println("方法内部 result = " + result);
+
+        return result;
+    }
+
+    @Override
+    public int mul(int i, int j) {
+
+        int result = i * j;
+
+        System.out.println("方法内部 result = " + result);
+
+        return result;
+    }
+
+    @Override
+    public int div(int i, int j) {
+
+        int result = i / j;
+
+        System.out.println("方法内部 result = " + result);
+
+        return result;
+    }
+}
+
+```
+
+##### 3.4.3、创建切面类
+
+```java
+@Component
+@Aspect //将当前组件标识为切面组件
+public class LoggerAspect{
+
+    @Pointcut("execution(* com.tzadok.spring.aop.annotation.CalculatorImpl.*(..))")
+    public void pointCut(){
+        //公共的切入点表达式
+    }
+
+    //@Before("execution(public int com.tzadok.spring.aop.annotation.CalculatorImpl.add(int ,int ))")
+    @Before("pointCut()")
+    public void beforeAdviceMethod(JoinPoint joinPoint){
+
+        //获取连接点对应的签名信息
+        Signature signature = joinPoint.getSignature();
+        //获取连接点所对应的方法的参数
+        Object[] args = joinPoint.getArgs();
+
+        System.out.println("LoggerAspect,前置通知,方法：" + signature.getName() + ",参数:" + Arrays.toString(args));
+    }
+
+
+    @After("pointCut()")
+    public void afterAdviceMethod(JoinPoint joinPoint){
+
+        Signature signature = joinPoint.getSignature();
+
+        System.out.println("LoggerAspect,后置通知,方法：" + signature.getName() + ",执行完毕");
+    }
+
+    /**
+     * 在返回通知中若要获取目标对象方法的返回值，只需要通过@AfterReturning注解的returning属性，
+     * 就可以将通知方法的某个参数指定为接收目标对象方法的返回值的参数
+     * @param joinPoint
+     * @param result
+     */
+    @AfterReturning(value = "pointCut()",returning = "result")
+    public void afterReturningAdviceMethod(JoinPoint joinPoint,Object result){
+
+        Signature signature = joinPoint.getSignature();
+
+        System.out.println("LoggerAspect,返回通知,方法：" + signature.getName() + ",结果:" + result);
+
+    }
+
+    /**
+     * 在返回通知中若要获取目标对象方法的返回值，只需要通过@AfterThrowing注解的throwing属性，
+     * 就可以将通知方法的某个参数指定为接收目标对象方法的异常的参数
+     * @param joinPoint
+     * @param ex
+     */
+    @AfterThrowing(value = "pointCut()",throwing = "ex")
+    public void afterThrowingAdviceMethod(JoinPoint joinPoint,Throwable ex){
+
+        Signature signature = joinPoint.getSignature();
+
+        System.out.println("LoggerAspect,异常通知,方法：" + signature.getName() + ",异常:" + ex);
+
+    }
+
+    /**
+     * 环绕通知
+     */
+    @Around("pointCut()")
+    //环绕通知的方法的返回值一定要和目标对象方法的返回值一致
+    public Object aroundAdviceMethod(ProceedingJoinPoint joinPoint){
+        Object result = null;
+        try {
+            System.out.println("环绕通知-->前置通知");
+            //表示目标对象的执行
+            result = joinPoint.proceed();
+            System.out.println("环绕通知-->返回通知");
+        } catch (Throwable e) {
+            e.printStackTrace();
+            System.out.println("环绕通知-->异常通知");
+        } finally {
+            System.out.println("环绕通知-->后置通知");
+        }
+        return result;
+    }
+
+}
+```
+
+在Spring的配置文件中配置：
+
+```xml
+    <!--
+        AOP的注意事项：
+        切面类和目标类都需要交给IOC容器
+        切面类必须通过@Aspect注解标识为一个切面
+        在spring的配置文化中设置<aop:aspectj-autoproxy />，开启基于注解的AOP
+    -->
+
+    <context:component-scan base-package="com.tzadok.spring.aop.annotation"></context:component-scan>
+
+    <!--开启基于注解的aop    -->
+    <aop:aspectj-autoproxy />
+```
+
+##### 3.4.4、各种通知
+
+- 前置通知：使用@Before注解标识，在被代理的目标方法**前**执行
+- 返回通知：使用@AfterReturning注解标识，在被代理的目标方法**成功结束**后执行（**寿终正寝**）
+- 异常通知：使用@AfterThrowing注解标识，在被代理的目标方法**异常结束**后执行（**死于非命**）
+- 后置通知：使用@After注解标识，在被代理的目标方法**最终结束**后执行（**盖棺定论**）
+- 环绕通知：使用@Around注解标识，使用try...catch...finally结构围绕**整个**被代理的目标方法，包括上面四种通知对应的所有位置
+
+各种通知的执行顺序：
+
+**Spring版本5.3.x以前：**
+
+- 前置通知
+- 目标操作
+- 后置通知
+- 返回通知或异常通知
+
+**Spring版本5.3.x以后：**
+
+- 前置通知
+- 目标操作
+- 返回通知或异常通知
+- 后置通知
+
+##### 3.4.5、切入点表达式
+
+①作用
+
+<img src="Spring.assets/011.png" alt="011" style="zoom:50%;" />
+
+**②语法细节**
+
+- 用*号代替“权限修饰符”和“返回值”部分表示“权限修饰符”和“返回值”不限
+- 在包名的部分，一个“*”号只能代表包的层次结构中的一层，表示这一层是任意的。
+
+​				例如：*.Hello匹配com.Hello，不匹配com.atguigu.Hello
+
+- 在包名的部分，使用“*..”表示包名任意、包的层次深度任意
+- 在类名的部分，类名部分整体用*号代替，表示类名任意
+- 在类名的部分，可以使用*号代替类名的一部分
+
+​				例如：*Service匹配所有名称以Service结尾的类或接口
+
+- 在方法名部分，可以使用*号表示方法名任意
+- 在方法名部分，可以使用*号代替方法名的一部分
+
+​				例如：*Operation匹配所有方法名以Operation结尾的方法
+
+- 在方法参数列表部分，使用(..)表示参数列表任意
+- 在方法参数列表部分，使用(int,..)表示参数列表以一个int类型的参数开头
+- 在方法参数列表部分，基本数据类型和对应的包装类型是不一样的
+
+​				切入点表达式中使用 int 和实际方法中 Integer 是不匹配的
+
+- 在方法返回值部分，如果想要明确指定一个返回值类型，那么必须同时写明权限修饰符
+
+​				例如：execution(public int *..*Service.*(.., int)) 正确
+
+​				例如：execution(* int *..*Service.*(.., int)) 错误
+
+![012](Spring.assets/012.png)
+
+##### 3.4.6、复用切入点表达式
+
+①声明
+
+```java
+@Pointcut("execution(* com.tzadok.spring.aop.annotation.CalculatorImpl.*(..))")
+public void pointCut(){
+    //公共的切入点表达式
+}
+```
+
+②在同一个切面中使用
+
+```java
+    @Before("pointCut()")
+    public void beforeAdviceMethod(JoinPoint joinPoint){
+        //获取连接点对应的签名信息
+        Signature signature = joinPoint.getSignature();
+        //获取连接点所对应的方法的参数
+        Object[] args = joinPoint.getArgs();
+        System.out.println("LoggerAspect,前置通知,方法：" + signature.getName() + ",参数:" + Arrays.toString(args));
+    }
+```
+
+③在不同切面中使用
+
+```java
+public class ValidateAspect {
+
+//    @Before("execution(* com.tzadok.spring.aop.annotation.CalculatorImpl.*(..))")
+    @Before("com.tzadok.spring.aop.annotation.LoggerAspect.pointCut()")
+    public void beforeMethod(){
+        System.out.println("ValidateAspect---->前置通知");
+    }
+}
+```
+
+##### 3.4.7、获取通知的相关信息
+
+**①获取连接点信息**
+
+获取连接点信息可以在通知方法的参数位置设置JoinPoint类型的形参
+
+```java
+@After("pointCut()")
+public void afterAdviceMethod(JoinPoint joinPoint){
+    Signature signature = joinPoint.getSignature();
+    System.out.println("LoggerAspect,后置通知,方法：" + signature.getName() + ",执行完毕");
+}
+```
+
+**②获取目标方法的返回值**
+
+@AfterReturning中的属性returning，用来将通知方法的某个形参，接收目标方法的返回值
+
+```java
+    /**
+     * 在返回通知中若要获取目标对象方法的返回值，只需要通过@AfterReturning注解的returning属性，
+     * 就可以将通知方法的某个参数指定为接收目标对象方法的返回值的参数
+     * @param joinPoint
+     * @param result
+     */
+    @AfterReturning(value = "pointCut()",returning = "result")
+    public void afterReturningAdviceMethod(JoinPoint joinPoint,Object result){
+        Signature signature = joinPoint.getSignature();
+        System.out.println("LoggerAspect,返回通知,方法：" + signature.getName() + ",结果:" + result);
+    }
+```
+
+**③获取目标方法的异常**
+
+@AfterThrowing中的属性throwing，用来将通知方法的某个形参，接收目标方法的异常
+
+```java
+    /**
+     * 在返回通知中若要获取目标对象方法的返回值，只需要通过@AfterThrowing注解的throwing属性，
+     * 就可以将通知方法的某个参数指定为接收目标对象方法的异常的参数
+     * @param joinPoint
+     * @param ex
+     */
+    @AfterThrowing(value = "pointCut()",throwing = "ex")
+    public void afterThrowingAdviceMethod(JoinPoint joinPoint,Throwable ex){
+        Signature signature = joinPoint.getSignature();
+        System.out.println("LoggerAspect,异常通知,方法：" + signature.getName() + ",异常:" + ex);
+    }
+```
+
+##### 3.4.8、环绕通知
+
+```java
+    /**
+     * 环绕通知
+     */
+    @Around("pointCut()")
+    //环绕通知的方法的返回值一定要和目标对象方法的返回值一致
+    public Object aroundAdviceMethod(ProceedingJoinPoint joinPoint){
+        Object result = null;
+        try {
+            System.out.println("环绕通知-->前置通知");
+            //表示目标对象的执行
+            result = joinPoint.proceed();
+            System.out.println("环绕通知-->返回通知");
+        } catch (Throwable e) {
+            e.printStackTrace();
+            System.out.println("环绕通知-->异常通知");
+        } finally {
+            System.out.println("环绕通知-->后置通知");
+        }
+        return result;
+    }
+```
+
+##### 3.4.9、切面的优先级
+
+相同目标方法上同时存在多个切面时，切面的优先级控制切面的**内外嵌套**顺序。
+
+- 优先级高的切面：外面
+- 优先级低的切面：里面
+
+使用@Order注解可以控制切面的优先级：
+
+- @Order(较小的数)：优先级高
+- @Order(较大的数)：优先级低
+
+#### 3.5、基于XML的AOP（了解）
+
+##### 3.5.1、准备工作
+
+①导入依赖
+
+②创建接口、接口实现类、切面类
+
+##### 3.5.2、实现
+
+```xml
+<aop:config>
+        <aop:pointcut id="pointCut" expression="execution(* com.tzadok.spring.aop.xml.CalculatorImpl.*(..))"/>
+        <!--  将IOC容器中的某个bean设置为切面      -->
+        <aop:aspect ref="loggerAspect">
+            <aop:before method="beforeAdviceMethod" pointcut-ref="pointCut"></aop:before>
+            <aop:after method="afterAdviceMethod" pointcut-ref="pointCut"></aop:after>
+            <aop:after-returning method="afterReturningAdviceMethod" pointcut-ref="pointCut" returning="result"></aop:after-returning>
+            <aop:after-throwing method="afterThrowingAdviceMethod" pointcut-ref="pointCut" throwing="ex"></aop:after-throwing>
+            <aop:around method="aroundAdviceMethod" pointcut-ref="pointCut"></aop:around>
+        </aop:aspect>
+
+        <aop:aspect ref="validateAspect" order="1">
+            <aop:before method="beforeMethod" pointcut-ref="pointCut"></aop:before>
+        </aop:aspect>
+    </aop:config>
+```
+
