@@ -9,6 +9,7 @@
         <module name="spring_helloworld" />
         <module name="spring_ioc_anntation" />
         <module name="spring-proxy" />
+        <module name="spring-transaction" />
         <module name="spring-aop" />
         <module name="spring_ioc_xml" />
       </profile>
