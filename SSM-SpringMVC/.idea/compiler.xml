@@ -6,9 +6,14 @@
         <sourceOutputDir name="target/generated-sources/annotations" />
         <sourceTestOutputDir name="target/generated-test-sources/test-annotations" />
         <outputRelativeToContentRoot value="true" />
+        <module name="Spring_listener" />
         <module name="spring_mvc_demo" />
-        <module name="spring_mvc_helloworld" />
+        <module name="spring_mvc_extension" />
         <module name="spting_mvc_rest" />
+        <module name="spring_mvx_annotation" />
+        <module name="spring_mvc_ajax" />
+        <module name="SSM" />
+        <module name="spring_mvc_helloworld" />
       </profile>
     </annotationProcessing>
   </component>

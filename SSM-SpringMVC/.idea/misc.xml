@@ -2,9 +2,14 @@
 <project version="4">
   <component name="ExternalStorageConfigurationManager" enabled="true" />
   <component name="FrameworkDetectionExcludesConfiguration">
+    <file type="web" url="file://$PROJECT_DIR$/Spring_listener" />
+    <file type="web" url="file://$PROJECT_DIR$/spring_mvc_ajax" />
     <file type="web" url="file://$PROJECT_DIR$/spring_mvc_demo" />
+    <file type="web" url="file://$PROJECT_DIR$/spring_mvc_extension" />
     <file type="web" url="file://$PROJECT_DIR$/spring_mvc_helloworld" />
+    <file type="web" url="file://$PROJECT_DIR$/spring_mvx_annotation" />
     <file type="web" url="file://$PROJECT_DIR$/spting_mvc_rest" />
+    <file type="web" url="file://$PROJECT_DIR$/SSM" />
   </component>
   <component name="MavenProjectsManager">
     <option name="originalFiles">
@@ -12,6 +17,12 @@
         <option value="$PROJECT_DIR$/spring_mvc_helloworld/pom.xml" />
         <option value="$PROJECT_DIR$/spring_mvc_demo/pom.xml" />
         <option value="$PROJECT_DIR$/spting_mvc_rest/pom.xml" />
+        <option value="$PROJECT_DIR$/spring_mvc_ajax/pom.xml" />
+        <option value="$PROJECT_DIR$/spring_mvc_extension/pom.xml" />
+        <option value="$PROJECT_DIR$/spring_mvc_annotation/pom.xml" />
+        <option value="$PROJECT_DIR$/spring_mvx_annotation/pom.xml" />
+        <option value="$PROJECT_DIR$/Spring_listener/pom.xml" />
+        <option value="$PROJECT_DIR$/SSM/pom.xml" />
       </list>
     </option>
   </component>

@@ -28,9 +28,6 @@ public class EmployeeController {
     @Autowired
     private EmployeeDao employeeDao;
 
-
-
-
     /**
      * 查询所有员工
      * @param model

@@ -20,10 +20,10 @@
     账户:<input type="text" name="username"><br>
     密码:<input type="password" name="password"><br>
     <input type="submit" value="登录"><br>
-<!--    <button type="submit">提交</button>-->
 </form>
 <hr>
 
+<a th:href="@{/test/request}">测试通过Request向请求域中共享数据</a>
 <a th:href="@{/test/mav}">测试通过ModelAndView向请求域中共享数据</a><br>
 <a th:href="@{/test/model}">测试通过Model向请求域中共享数据</a><br>
 <a th:href="@{/test/modelMap}">测试通过ModelMap向请求域中共享数据</a><br>

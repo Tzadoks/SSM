@@ -7,6 +7,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.servlet.ModelAndView;
 
 import javax.servlet.ServletContext;
+import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpSession;
 import java.util.Map;
 
@@ -30,6 +31,12 @@ import java.util.Map;
  */
 @Controller
 public class TestScopeController {
+
+    @RequestMapping("/test/request")
+    public String testRequest(HttpServletRequest request){
+        request.setAttribute("testRequestScope","hello,Request");
+        return "success";
+    }
 
     @RequestMapping("/test/mav")
     public ModelAndView testMAV(){
